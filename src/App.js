@@ -1,58 +1,79 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddTask from "./components/AddTask";
 import Header from "./components/Header";
-import  Tasks  from "./components/Tasks";
-
+import Tasks from "./components/Tasks";
 
 function App() {
 
-  const [showAddTask, setShowAddTask] = useState(false)
+  const baseUrl = 'https://secret-dusk-60490.herokuapp.com/api'
 
-  const [tasks, setTask]= useState([
-    {
-      id: 1,
-      text: "Doctors Appointment",
-      day: "Feb 5th at 2:00pm",
-      reminder: true,
-    },
-    {
-      id: 2,
-      text: "patient Appointment",
-      day: "Feb 6th at 4:00pm",
-      reminder: true,
-    },
-    {
-      id: 3,
-      text: " Appointment",
-      day: "Feb 8th at 6:00pm",
-      reminder: false,
-    },
-  ])
+  const [showAddTask, setShowAddTask] = useState(false);
 
- // Add task 
-  const addTask =(task) =>{
-    const id = Math.floor(Math.random() * 10000)+1
-    const newTask = {id, ...task}
-    // console.log(newTask);
-    setTask([...tasks, newTask])
-  }
+  const [tasks, setTask] = useState([]);
 
- // Delete task 
-  const deleteTask =(id) =>{
-    setTask(tasks.filter((task)=> task.id !== id))
-  }
+  useEffect(() => {
+    const getTasks = async () =>{
+      const getTaskFromServer = await fetchTasks()
+      setTask(getTaskFromServer.data)
+    } 
+    getTasks();
+  },[]);
 
- // Toggle reminder 
-  const toggleReminder =(id) =>{
-    setTask(tasks.map((task)=> task.id === id ? {...task,reminder : !task.reminder}: task))
-  }
+  // fetch tasks
+  const fetchTasks = async () => {
+    const res = await fetch(
+      `${baseUrl}/tasks`
+    );
+    const data = await res.json();
 
+    return data
+  };
+
+  // Add task
+  const addTask = async (task) => {
+    const res = await fetch(`${baseUrl}/tasks`,{
+      method:'POST',
+      headers:{
+        'Content-type': 'application/json',
+      },
+      body:JSON.stringify(task)
+    })
+
+    const data = await res.json()
+    // console.log(data.data.reminder);
+    setTask([...tasks, data.data]);
+  };
+
+  // Delete task
+  const deleteTask = async (id) => {
+    setTask(tasks.filter((task) => task.id !== id));
+    await fetch(`${baseUrl}/tasks/${id}`,{
+      method: 'DELETE'
+    })
+   
+  };
+
+  // Toggle reminder
+  const toggleReminder = (id) => {
+    setTask(
+      tasks.map((task) =>
+        task.id === id ? { ...task, reminder: !task.reminder } : task
+      )
+    );
+  };
 
   return (
     <div className="container">
-      <Header onAdd={()=> setShowAddTask(!showAddTask)} showAdd={showAddTask} />
-     {showAddTask && <AddTask onAdd={addTask}/>}
-     {tasks.length > 0 ?<Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder}/> : 'No data found'}
+      <Header
+        onAdd={() => setShowAddTask(!showAddTask)}
+        showAdd={showAddTask}
+      />
+      {showAddTask && <AddTask onAdd={addTask} />}
+      {tasks.length > 0 ? (
+        <Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder} />
+      ) : (
+        "No data found"
+      )}
     </div>
   );
 }
